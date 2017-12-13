@@ -213,6 +213,7 @@ def to_graph(data):
 		g.close()
 
 #запись в БД
+#в базу записываются данные из data[1]
 def to_db(data):
 	connection = pymysql.connect(host='localhost',
 								 user='root',
