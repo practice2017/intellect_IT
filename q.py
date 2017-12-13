@@ -212,6 +212,57 @@ def to_graph(data):
 		g.write('}\n')
 		g.close()
 
+#запись в БД
+def to_db(data):
+	connection = pymysql.connect(host='localhost',
+								 user='root',
+								 password='1234',
+								 db='analize',
+								 charset='utf8mb4',
+								 cursorclass=pymysql.cursors.DictCursor)
+	for k in data.keys():
+		# try:
+		with connection.cursor() as cursor:
+			# Create a new record
+			sql1 = "SELECT id FROM `word` where name=%s"
+			cursor.execute(sql1, k[0])
+			result = cursor.fetchone()
+			if result is None:
+				sql = "INSERT INTO `word` (`name`,`id_parent`) VALUES (%s, %s)"
+				cursor.execute(sql, (k[0], 1))
+				cursor.execute(sql1, k[0])
+				result = cursor.fetchone()
+			k0 = result
+			k00 = k0['id']
+			cursor.execute(sql1, k[2])
+			result = cursor.fetchone()
+			if result is None:
+				sql = "INSERT INTO `word` (`name`,`id_parent`) VALUES (%s, %s)"
+				cursor.execute(sql, (k[2], 1))
+				cursor.execute(sql1, k[2])
+				result = cursor.fetchone()
+			k2 = result
+			k22 = k2['id']
+			# cursor.execute(sql, (k[2], 1))
+			sql2 = "SELECT id FROM `definition` where def=%s AND id_word=%s AND relation=%s"
+			cursor.execute(sql2, (k22, k00, k[1]))
+			result = cursor.fetchone()
+			if result is None:
+				sql3 = "INSERT INTO `definition` (`def`,`id_word`, `relation`, `ref`) VALUES (%s, %s, %s, %s)"
+				cursor.execute(sql3, (k22, k00, k[1], 1))
+			else:
+				sql = "UPDATE `definition` SET `ref`=%s WHERE `id`=%s"
+				count = result['ref']
+				id_def = result['id']
+				cursor.execute(sql, (count + 1, id_def))
+
+			# connection is not autocommit by default. So you must commit to save
+			# your changes.
+			connection.commit()
+		# finally:
+	connection.close()
+
+
 if __name__ == '__main__':
 	import sys
 	data = load_data('data.json')
