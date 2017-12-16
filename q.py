@@ -10,19 +10,24 @@ import pymorphy2
 # Парсим текст. На вход подается текст.
 def tokenize(sentences):
 	arr = []
+	arr2 = []
 	morph = pymorphy2.MorphAnalyzer()
 	term_extractor = TermExtractor()
-	for sent in nltk.sent_tokenize(sentences.lower()):
-		for term in term_extractor(sent):
-			arr.append(term.normalized)
-			print (term.normalized, term.count)
-		for word in nltk.word_tokenize(sent):
-			p = morph.parse(word)[0]
-			v = p.tag.POS
-			if v == 'VERB':
-				arr.append(word)
-				print (word)
-	return arr
+	for term in term_extractor(sentences):
+		arr.append(term.normalized)
+	for word in nltk.word_tokenize(sentences):
+		norm = morph.parse(word)[0].normal_form
+		n = morph.parse(word)[0]
+		tagg = n.tag.POS
+		for term in arr:
+			if (norm in term) and (tagg != 'PREP') and (tagg != 'CONJ') and (tagg != 'INTJ'):
+				arr2.append(term)
+		p = morph.parse(word)[0]
+		v = p.tag.POS
+		if v == 'VERB':
+			arr2.append(word)
+	print(arr2)
+	return arr2
 
 # Попытка поиска однородных членов предложения
 def odnorodn(term, v):
