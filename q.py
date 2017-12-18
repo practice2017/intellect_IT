@@ -11,21 +11,36 @@ import pymorphy2
 def tokenize(sentences):
 	arr = []
 	arr2 = []
+	i = 0
+	h = 1
+	j = 0
 	morph = pymorphy2.MorphAnalyzer()
 	term_extractor = TermExtractor()
+	words = nltk.word_tokenize(sentences)
 	for term in term_extractor(sentences):
 		arr.append(term.normalized)
-	for word in nltk.word_tokenize(sentences):
-		norm = morph.parse(word)[0].normal_form
-		n = morph.parse(word)[0]
+	while i < len(words):
+		n = morph.parse(words[i])[0]
 		tagg = n.tag.POS
-		for term in arr:
-			if (norm in term) and (tagg != 'PREP') and (tagg != 'CONJ') and (tagg != 'INTJ'):
-				arr2.append(term)
-		p = morph.parse(word)[0]
-		v = p.tag.POS
-		if v == 'VERB':
-			arr2.append(word)
+		if (tagg == 'NOUN') or (tagg == 'ADJF'):
+			norm = morph.parse(words[i])[0].inflect({'sing', 'nomn'}).word
+		else:
+			norm = morph.parse(words[i])[0].normal_form
+		h = 1
+		while j < len(arr):
+			if (norm in arr[j]) and (tagg != 'PREP') and (tagg != 'CONJ') and (tagg != 'INTJ'):
+				arr2.append(arr[j])
+				s = arr[j].split(' ')
+				length = len(s)
+				if (length > 1):
+					h = length
+				else:
+					h = 1
+			j += 1
+		j = 0
+		if tagg == 'VERB':
+			arr2.append(words[i])
+		i += h
 	print(arr2)
 	return arr2
 
