@@ -9,7 +9,9 @@ from nltk.tokenize import WordPunctTokenizer as WPT
 import nltk
 import pymorphy2
 import pymysql.cursors
-
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from urllib.parse import urlparse
+import urllib.request
 
 # Парсим текст. На вход подается текст.
 def tokenize(sentences):
@@ -97,13 +99,6 @@ def search_start(connection, den11, den22, rel):
             else:
                 relation = None
     return relation
-
-
-# Попытка поиска однородных членов предложения
-def odnorodn(term, v):
-    if v == 'ADJF' or v == 'ADJS' or v == 'ADVB':
-        if v in term:
-            print(v)
 
 
 def compare_phrase(P1, P2):
@@ -252,8 +247,10 @@ def check_colloc(den1, rel, den2):
 
 
 # добавление новых связок в модель
-def add_to_model(relations):
-    add_colloc = tokenize("Захоронение имеет влияние.")
+def add_to_model(relations,name):
+	direct = '/var/www/html/uploads/'
+	file = open(direct + name, 'r')
+	add_colloc = tokenize(file.read())
     i = 0
     while i < len(add_colloc):
         flag = check_colloc(add_colloc[i], add_colloc[i + 1], add_colloc[i + 2])
@@ -268,7 +265,7 @@ def add_to_model(relations):
 
 
 # Формирование data
-def load_data(filename='data.json'):
+def load_data(name, filename='data.json'):
     mystem = Mystem()
     knowledge = {}
     significats = {}
@@ -277,7 +274,7 @@ def load_data(filename='data.json'):
         # for _ in kb.keys():
         # pairs = kb[_]
         relations = load_data_from_db()
-        relations = add_to_model(relations)
+        relations = add_to_model(relations,name)
         if relations is None:
             pass
         else:
@@ -487,20 +484,39 @@ def to_db(data):
     connection.close()
 
 
-if __name__ == '__main__':
-    import sys
+def mmain(name):
+	data = load_data(name,'data.json')
+	# print("\n", "data1", "\n")
+	# print(data[1])
+	to_graph(data[1])
+	q = load_q('tbo-test.json')
+	a = answer(data, q)
+	# print(dumps(a, indent=4, ensure_ascii=0))
+	f = open('text.txt', 'w')
+	f.write(dumps(a, indent=4, ensure_ascii=0))
+	f.close
+	k = load_key('tbo-key.json')
+	check_key(a, k)
 
-    data = load_data('data.json')
-    print("\n", "data1", "\n")
-    print(data[1])
-    to_graph(data[1])
-    q = load_q('tbo-test.json')
-    a = answer(data, q)
-    print(dumps(a, indent=4, ensure_ascii=0))
-    f = open('text.txt', 'w')
-    f.write(dumps(a, indent=4, ensure_ascii=0))
-    f.close
-    k = load_key('tbo-key.json')
-    check_key(a, k)
-# Вызов парсера
-# tokenize(u'Красивая и загадочная Оля написала и отправила мне длинное и информативное сообщение и письмо.')
+class GetHandler(BaseHTTPRequestHandler):
+
+	def do_GET(self):
+		parsed_request = urlparse(self.path)
+		parsed_url = parsed_request.query
+		#with urllib.request.urlopen(parsed_url) as response:
+			#data = response.read()
+		print(parsed_url)
+		message = mmain(parsed_url)
+		self.send_response(200)
+		self.send_header("Content-type", "text/html")
+		self.end_headers()
+		self.wfile.write(bytes("<html><head><title>This is web-server on Python</title></head>", "utf-8"))
+		self.wfile.write(bytes("<body><p>This web-server is created for running the python script.</p>", "utf-8"))
+		self.wfile.write(bytes("</body></html>", "utf-8"))
+		self.wfile.write(message)
+		return
+
+if __name__ == '__main__':
+    server = HTTPServer(('localhost', 8082), GetHandler)
+    print('Starting server at http://localhost:8082')
+    server.serve_forever()
